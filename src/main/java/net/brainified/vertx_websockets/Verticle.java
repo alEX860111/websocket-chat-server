@@ -8,7 +8,6 @@ import java.util.Objects;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.eventbus.EventBus;
-import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.StaticHandler;
@@ -19,51 +18,17 @@ import io.vertx.ext.web.handler.sockjs.SockJSHandler;
 
 final class Verticle extends AbstractVerticle {
 
-  public Verticle() {
-  }
-
   @Override
   public void start(final Future<Void> fut) {
-    final EventBus eb = vertx.eventBus();
+    final EventBus eventBus = vertx.eventBus();
 
-    eb.consumer("chat.to.server").handler(message -> {
-      String timestamp = DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.MEDIUM).format(Date.from(Instant.now()));
-      System.out.println(message.headers().size());
-      eb.publish("chat.to.client", timestamp + ", " + message.headers().get("remoteAddress") + ": " + message.body());
+    eventBus.consumer("chat.to.server").handler(message -> {
+      String timestamp = DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.MEDIUM)
+          .format(Date.from(Instant.now()));
+      eventBus.publish("chat.to.client", timestamp + ", " + message.headers().get("remoteAddress") + ": " + message.body());
     });
 
-    final BridgeOptions opts = new BridgeOptions()
-        .addInboundPermitted(new PermittedOptions().setAddress("chat.to.server"))
-        .addOutboundPermitted(new PermittedOptions().setAddress("chat.to.client"));
-
-    final SockJSHandler sockJSHandler = SockJSHandler.create(vertx).bridge(opts, event -> {
-      System.out.println(event.type());
-      System.out.println(event.socket().remoteAddress());
-      if (BridgeEventType.SOCKET_CREATED.equals(event.type())) {
-        //JsonObject message = new JsonObject();
-        //message.put("address", "chat.to.server");
-        //message.put("body", "test");
-        //message.put("type", "send");
-        //event.setRawMessage(message);
-        //eb.publish("chat.to.client", event.type().toString() +" " + event.socket().remoteAddress().toString());
-      }
-      if (BridgeEventType.REGISTER.equals(event.type())) {
-        //eb.publish("chat.to.client", event.type().toString() +" " + event.socket().remoteAddress().toString());
-      }
-      if (BridgeEventType.SOCKET_CLOSED.equals(event.type())) {
-        //eb.publish("chat.to.client", event.type().toString() +" " + event.socket().remoteAddress().toString());
-      }
-      if (BridgeEventType.SEND.equals(event.type())) {
-        JsonObject rawMessage = event.getRawMessage();
-        JsonObject headers = rawMessage.getJsonObject("headers");
-        if (Objects.nonNull(headers)) {
-          headers.put("remoteAddress", event.socket().remoteAddress().toString());
-        }
-        System.out.println(Json.encode(rawMessage));
-      }
-      event.complete(true);
-    });
-    
+    final SockJSHandler sockJSHandler = createSockJSHandler();
 
     final Router router = Router.router(vertx);
     router.route("/eventbus/*").handler(sockJSHandler);
@@ -78,6 +43,25 @@ final class Verticle extends AbstractVerticle {
       }
     });
 
+  }
+
+  private SockJSHandler createSockJSHandler() {
+    final BridgeOptions options = new BridgeOptions()
+        .addInboundPermitted(new PermittedOptions().setAddress("chat.to.server"))
+        .addOutboundPermitted(new PermittedOptions().setAddress("chat.to.client"));
+
+    final SockJSHandler sockJSHandler = SockJSHandler.create(vertx).bridge(options, event -> {
+
+      if (BridgeEventType.SEND.equals(event.type())) {
+        final JsonObject rawMessage = event.getRawMessage();
+        final JsonObject headers = rawMessage.getJsonObject("headers");
+        if (Objects.nonNull(headers)) {
+          headers.put("remoteAddress", event.socket().remoteAddress().toString());
+        }
+      }
+      event.complete(true);
+    });
+    return sockJSHandler;
   }
 
 }

@@ -10,11 +10,8 @@ public final class Main {
 
   public static void main(String[] args) {
     final Injector injector = Guice.createInjector(new AbstractModule() {
-
       @Override
       protected void configure() {
-        // TODO Auto-generated method stub
-
       }
     });
     Vertx.vertx().deployVerticle(injector.getInstance(Verticle.class));

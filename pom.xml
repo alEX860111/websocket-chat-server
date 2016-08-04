@@ -9,7 +9,7 @@
 	<name>vertx-websockets</name>
 
 	<properties>
-		<vertx.version>3.3.0</vertx.version>
+		<vertx.version>3.3.2</vertx.version>
 		<guice.version>4.1.0</guice.version>
 		<junit.version>4.12</junit.version>
 		<mockito.version>1.10.19</mockito.version>
