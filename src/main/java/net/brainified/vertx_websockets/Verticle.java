@@ -1,9 +1,8 @@
 package net.brainified.vertx_websockets;
 
-import java.text.DateFormat;
-import java.time.Instant;
-import java.util.Date;
 import java.util.Objects;
+
+import javax.inject.Inject;
 
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
@@ -18,9 +17,22 @@ import io.vertx.ext.web.handler.sockjs.SockJSHandler;
 
 final class Verticle extends AbstractVerticle {
 
+  private final ChatMessageReceiverImpl handler;
+
+  private final ChatMessagePublisher publisher;
+
+  private final EventBus eventBus;
+
+  @Inject
+  public Verticle(final ChatMessageReceiverImpl handler, final ChatMessagePublisher publisher, final EventBus eventBus) {
+    this.handler = handler;
+    this.publisher = publisher;
+    this.eventBus = eventBus;
+  }
+
   @Override
   public void start(final Future<Void> fut) {
-    configureEventBus();
+    eventBus.consumer("chat.to.server").handler(handler);
 
     final SockJSHandler sockJSHandler = createSockJSHandler();
 
@@ -36,16 +48,6 @@ final class Verticle extends AbstractVerticle {
 
   }
 
-  private void configureEventBus() {
-    final EventBus eventBus = vertx.eventBus();
-
-    eventBus.consumer("chat.to.server").handler(message -> {
-      String timestamp = DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.MEDIUM)
-          .format(Date.from(Instant.now()));
-      eventBus.publish("chat.to.client", timestamp + ", " + message.headers().get("remoteAddress") + ": " + message.body());
-    });
-  }
-
   private SockJSHandler createSockJSHandler() {
     final BridgeOptions options = new BridgeOptions()
         .addInboundPermitted(new PermittedOptions().setAddress("chat.to.server"))
@@ -58,6 +60,12 @@ final class Verticle extends AbstractVerticle {
         if (Objects.nonNull(headers)) {
           headers.put("remoteAddress", event.socket().remoteAddress().toString());
         }
+      }
+      if (BridgeEventType.SOCKET_CREATED.equals(event.type())) {
+        publisher.publish(event.socket().remoteAddress().toString() + " joined");
+      }
+      if (BridgeEventType.SOCKET_CLOSED.equals(event.type())) {
+        publisher.publish(event.socket().remoteAddress().toString() + " left");
       }
       event.complete(true);
     });
