@@ -1,33 +1,32 @@
 package net.brainified.vertx_websockets;
 
-import java.util.Objects;
-
 import javax.inject.Inject;
 
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.core.eventbus.EventBus;
-import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.StaticHandler;
-import io.vertx.ext.web.handler.sockjs.BridgeEventType;
+import io.vertx.ext.web.handler.sockjs.BridgeEvent;
 import io.vertx.ext.web.handler.sockjs.BridgeOptions;
 import io.vertx.ext.web.handler.sockjs.PermittedOptions;
 import io.vertx.ext.web.handler.sockjs.SockJSHandler;
 
 final class Verticle extends AbstractVerticle {
 
-  private final ChatMessageReceiverImpl handler;
-
-  private final ChatMessagePublisher publisher;
+  private final ChatMessageReceiver handler;
 
   private final EventBus eventBus;
 
+  private final Handler<BridgeEvent> bridgeEventHandler;
+
   @Inject
-  public Verticle(final ChatMessageReceiverImpl handler, final ChatMessagePublisher publisher, final EventBus eventBus) {
+  public Verticle(final ChatMessageReceiver handler, final EventBus eventBus,
+      final Handler<BridgeEvent> bridgeEventHandler) {
     this.handler = handler;
-    this.publisher = publisher;
     this.eventBus = eventBus;
+    this.bridgeEventHandler = bridgeEventHandler;
   }
 
   @Override
@@ -53,22 +52,7 @@ final class Verticle extends AbstractVerticle {
         .addInboundPermitted(new PermittedOptions().setAddress("chat.to.server"))
         .addOutboundPermitted(new PermittedOptions().setAddress("chat.to.client"));
 
-    final SockJSHandler sockJSHandler = SockJSHandler.create(vertx).bridge(options, event -> {
-      if (BridgeEventType.SEND.equals(event.type())) {
-        final JsonObject rawMessage = event.getRawMessage();
-        final JsonObject headers = rawMessage.getJsonObject("headers");
-        if (Objects.nonNull(headers)) {
-          headers.put("remoteAddress", event.socket().remoteAddress().toString());
-        }
-      }
-      if (BridgeEventType.SOCKET_CREATED.equals(event.type())) {
-        publisher.publish(event.socket().remoteAddress().toString() + " joined");
-      }
-      if (BridgeEventType.SOCKET_CLOSED.equals(event.type())) {
-        publisher.publish(event.socket().remoteAddress().toString() + " left");
-      }
-      event.complete(true);
-    });
+    final SockJSHandler sockJSHandler = SockJSHandler.create(vertx).bridge(options, bridgeEventHandler);
 
     return sockJSHandler;
   }
