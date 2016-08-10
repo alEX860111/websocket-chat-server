@@ -20,20 +20,25 @@ final class BridgeEventHandler implements Handler<BridgeEvent> {
 
   @Override
   public void handle(final BridgeEvent event) {
+    final String remoteAddress = event.socket().remoteAddress().toString();
     if (BridgeEventType.SEND.equals(event.type())) {
-      final JsonObject rawMessage = event.getRawMessage();
-      final JsonObject headers = rawMessage.getJsonObject("headers");
-      if (Objects.nonNull(headers)) {
-        headers.put("remoteAddress", event.socket().remoteAddress().toString());
-      }
+      addHeader(event, remoteAddress);
     }
     if (BridgeEventType.SOCKET_CREATED.equals(event.type())) {
-      publisher.publish(event.socket().remoteAddress().toString() + " joined");
+      publisher.publish(remoteAddress + " joined");
     }
     if (BridgeEventType.SOCKET_CLOSED.equals(event.type())) {
-      publisher.publish(event.socket().remoteAddress().toString() + " left");
+      publisher.publish(remoteAddress + " left");
     }
     event.complete(true);
+  }
+
+  private void addHeader(final BridgeEvent event, final String remoteAddress) {
+    final JsonObject rawMessage = event.getRawMessage();
+    final JsonObject headers = rawMessage.getJsonObject("headers");
+    if (Objects.nonNull(headers)) {
+      headers.put("remoteAddress", remoteAddress);
+    }
   }
 
 }

@@ -12,6 +12,7 @@ public final class Main {
     final Vertx vertx = Vertx.vertx();
     final Injector injector = Guice.createInjector(new ChatModule(vertx));
 
+    //TODO better way to configure eventBus?
     final EventBus eventBus = injector.getInstance(EventBus.class);
     eventBus.consumer("chat.to.server").handler(injector.getInstance(ChatMessageReceiver.class));
 
