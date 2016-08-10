@@ -24,8 +24,7 @@ final class RouterProvider implements Provider<Router> {
   public Router get() {
     final Router router = Router.router(vertx);
     router.route("/eventbus/*").handler(sockJSHandler);
-    router.route("/app/*").handler(StaticHandler.create("../../workspace_js/websocket-chat-client/app"));
-    router.route("/assets/*").handler(StaticHandler.create("../../workspace_js/websocket-chat-client/node_modules"));
+    router.route("/app/*").handler(StaticHandler.create("app"));
     return router;
   }
 
