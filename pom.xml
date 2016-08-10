@@ -75,7 +75,7 @@
 							<transformers>
 								<transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
 									<manifestEntries>
-										<Main-Class>io.vertx.blog.first.Main</Main-Class>
+										<Main-Class>net.brainified.vertx_websockets.Main</Main-Class>
 									</manifestEntries>
 								</transformer>
 							</transformers>
