@@ -21,6 +21,7 @@ $(function() {
 
     // send a message
     form.submit(submit);
+    eb.send('chat.to.server', 'joined');
   };
 
   function submit(e) {

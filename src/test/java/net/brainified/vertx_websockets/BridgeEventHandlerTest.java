@@ -24,9 +24,6 @@ public class BridgeEventHandlerTest {
   @Mock
   private BridgeEvent event;
 
-  @Mock
-  private ChatMessagePublisher publisher;
-
   @InjectMocks
   private BridgeEventHandler handlerSUT;
 
@@ -50,22 +47,7 @@ public class BridgeEventHandlerTest {
   public void testSend() {
     when(event.type()).thenReturn(BridgeEventType.SEND);
     handlerSUT.handle(event);
-    verifyZeroInteractions(publisher);
     assertEquals("remoteAddressValue", event.getRawMessage().getJsonObject("headers").getString("remoteAddress"));
-  }
-
-  @Test
-  public void testSocketCreated() {
-    when(event.type()).thenReturn(BridgeEventType.SOCKET_CREATED);
-    handlerSUT.handle(event);
-    verify(publisher).publish("remoteAddressValue joined");
-  }
-
-  @Test
-  public void testSocketClosed() {
-    when(event.type()).thenReturn(BridgeEventType.SOCKET_CLOSED);
-    handlerSUT.handle(event);
-    verify(publisher).publish("remoteAddressValue left");
   }
 
 }
